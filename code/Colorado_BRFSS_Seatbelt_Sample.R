@@ -44,11 +44,13 @@ save(list = ls(pattern = glob2rx("co_*.df")), file = "co_brfssdata.RData")
 # - Marital Status
 # - General Health
 # - Currently Smokes Cigs (X_rfsmok3)
+# - Race/Ethnicity
+rm(list = ls())
 load("co_brfssdata.RData")
 varlist1 <- c("age", "ctycode", "sex", "income2", "marital", 
-              "genhlth", "X_rfsmok3", "seatbelt", "iyear")
+              "genhlth", "X_rfsmok3", "seatbelt", "iyear", "race2")
 varlist2 <- c("age", "ctycode", "sex", "income2", "marital", 
-              "genhlth", "X_rfsmok3", "iyear")
+              "genhlth", "X_rfsmok3", "iyear", "race2")
 # -----------------------------------------------------------------------------
 # ML Sample Years = 06, 08, 10-12
 winsmpl.lst <- list((co_06.df %>% select(., varlist1) %>% mutate(year = 2006)),
@@ -63,34 +65,6 @@ winsmpl.lst <- list((co_06.df %>% select(., varlist1) %>% mutate(year = 2006)),
 outsmpl.lst <- list((co_05.df %>% select(., varlist2) %>% mutate(year = 2005)),
                     (co_07.df %>% select(., varlist2) %>% mutate(year = 2007)),
                     (co_09.df %>% select(., varlist2) %>% mutate(year = 2009)))
-
-# -----------------------------------------
-# Create Sample Data Frames (Include basic removal of non-responses from variables)
-insample.df <- do.call(rbind, winsmpl.lst) %>%
-  rename(., income = income2, smoker = X_rfsmok3) %>%
-  mutate_at(vars(marital, genhlth, smoker, seatbelt), na_if, 9) %>%
-  mutate_at(vars(income), na_if, 99) %>%
-  mutate_at(vars(income), na_if, 77) %>%
-  mutate_at(vars(ctycode), na_if, 777) %>%
-  mutate_at(vars(ctycode), na_if, 888) %>%
-  mutate_at(vars(ctycode), na_if, 999) %>%
-  mutate(sex = factor(.data$sex, levels = c(1,2), labels = c("female","male"))) %>%
-  
-  rename(gender = sex)
-
-outsample.df <- do.call(rbind, outsmpl.lst) %>%
-  rename(., income = income2, smoker = X_rfsmok3) %>%
-  mutate_at(vars(marital, genhlth, smoker), na_if, 9) %>%
-  mutate_at(vars(income), na_if, 99) %>%
-  mutate_at(vars(income), na_if, 77) %>%
-  mutate_at(vars(ctycode), na_if, 777) %>%
-  mutate_at(vars(ctycode), na_if, 888) %>%
-  mutate_at(vars(ctycode), na_if, 999) %>%
-  mutate(female = ifelse(sex == 2, "Female", "Male")) %>%
-  mutate_at(vars(female), as.factor) %>%
-  select(-sex)
-
-  # rm(winsmpl.lst, outsmpl.lst)
 # -----------------------------------------------------------------------------
 # Grab some more data for the urban and rural codes -
 urbrur.df <- read.csv("NCHSURCodes2013.csv")
@@ -105,15 +79,64 @@ urbrur.df <- read.csv("NCHSURCodes2013.csv")
    mutate(urban = ifelse(rur.code < 4, "Urban", "Rural")) %>%
    mutate_at(vars(urban), as.factor) %>%
    select(ctycode, urban)
-
-# -----------------------------------------    
-# Update DF with an inner_join so that if a county is NA or not in the list
-# then it is droppsed from the sample.
-insample.df <- insample.df %>%
-  inner_join(co_urb.2mrg)
+# -----------------------------------------
+# Create some labels that will be used when labeling variables
+ gender <- c("female", "male")
+ inclab <- c("(-inf, $10,000)", "[$10,000, $15,000)", "[$15,000, $20,000)",
+             "[$20,000, $25,000)", "[$25,000, $35,000)", "[$35,000, $50,000)",
+             "[$50,000, $75,000)", "[$75,000, inf)")
+ married <- c("married", "not currently", "never married")
+ health <- c("Excellent", "Very good", "Good", "Fair","Poor")
+ smoke <- c("no", "yes")
+ belts <- c("no", "yes")
  
-outsample.df <- outsample.df %>%
-  inner_join(co_urb.2mrg)
+# Create Sample Data Frames (Include basic removal of non-responses from variables)
+insample.df <- do.call(rbind, winsmpl.lst) %>%
+  rename(., income = income2, smoker = X_rfsmok3) %>%
+  mutate_at(vars(marital, genhlth, smoker, seatbelt, race2), na_if, 9) %>%
+  mutate_at(vars(seatbelt), na_if, 7) %>%
+  mutate(seatbelt = ifelse(seatbelt == 1, 2, 1)) %>%
+  mutate(race2 = ifelse(race2 > 2, race2 + 1, race2)) %>%
+  mutate(race2 = ifelse(race2 == 9, 3, race2)) %>%
+  mutate(race2 = ifelse(race2 > 4, 4, race2)) %>% 
+  mutate(marital = ifelse((marital > 1 & marital < 5), 2, marital)) %>%
+  mutate(marital = ifelse(marital > 4, 3, marital)) %>%
+  mutate_at(vars(income), na_if, 99) %>%
+  mutate_at(vars(income), na_if, 77) %>%
+  mutate_at(vars(ctycode), na_if, 777) %>%
+  mutate_at(vars(ctycode), na_if, 888) %>%
+  mutate_at(vars(ctycode), na_if, 999) %>%
+  mutate(seatbelt = factor(.data$seatbelt, levels = c(1,2), labels = belts)) %>%
+  mutate(sex = factor(.data$sex, levels = c(1,2), labels = gender)) %>%
+  mutate(income = factor(.data$income, levels = c(1:8), labels = inclab)) %>%
+  mutate(marital = factor(.data$marital, levels = c(1:3), labels = married)) %>%
+  mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
+  mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
+  inner_join(co_urb.2mrg) %>%
+  rename(gender = sex, race.cat = race2) %>%
+  select(seatbelt, age, gender:smoker, race.cat)
 
+outsample.df <- do.call(rbind, outsmpl.lst) %>%
+  rename(., income = income2, smoker = X_rfsmok3) %>%
+  mutate(race2 = ifelse(race2 > 2, race2 + 1, race2)) %>%
+  mutate(race2 = ifelse(race2 == 9, 3, race2)) %>%
+  mutate(race2 = ifelse(race2 > 4, 4, race2)) %>% 
+  mutate(marital = ifelse((marital > 1 & marital < 5), 2, marital)) %>%
+  mutate(marital = ifelse(marital > 4, 3, marital)) %>%
+  mutate_at(vars(income), na_if, 99) %>%
+  mutate_at(vars(income), na_if, 77) %>%
+  mutate_at(vars(ctycode), na_if, 777) %>%
+  mutate_at(vars(ctycode), na_if, 888) %>%
+  mutate_at(vars(ctycode), na_if, 999) %>%
+  mutate(sex = factor(.data$sex, levels = c(1,2), labels = gender)) %>%
+  mutate(income = factor(.data$income, levels = c(1:8), labels = inclab)) %>%
+  mutate(marital = factor(.data$marital, levels = c(1:3), labels = married)) %>%
+  mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
+  mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
+  inner_join(co_urb.2mrg) %>%
+  rename(gender = sex, race.cat = race2) %>%
+  select(age, gender:smoker, race.cat)
+
+  # rm(winsmpl.lst, outsmpl.lst)
 save(insample.df, outsample.df, file = "brfss_small_ml_dfs.RData")
 # -----------------------------------------------------------------------------
