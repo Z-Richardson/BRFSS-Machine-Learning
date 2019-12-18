@@ -89,6 +89,7 @@ urbrur.df <- read.csv("NCHSURCodes2013.csv")
  health <- c("Excellent", "Very good", "Good", "Fair","Poor")
  smoke <- c("no", "yes")
  belts <- c("no", "yes")
+ race <- c("White", "Black", "Hispanic", "Other")
  
 # Create Sample Data Frames (Include basic removal of non-responses from variables)
 insample.df <- do.call(rbind, winsmpl.lst) %>%
@@ -112,6 +113,7 @@ insample.df <- do.call(rbind, winsmpl.lst) %>%
   mutate(marital = factor(.data$marital, levels = c(1:3), labels = married)) %>%
   mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
   mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
+  mutate(race2 = factor(.data$race2, levels = c(1:4), labels = race)) %>%
   inner_join(co_urb.2mrg) %>%
   rename(gender = sex, race.cat = race2)
 
@@ -132,6 +134,7 @@ outsample.df <- do.call(rbind, outsmpl.lst) %>%
   mutate(marital = factor(.data$marital, levels = c(1:3), labels = married)) %>%
   mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
   mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
+  mutate(race2 = factor(.data$race2, levels = c(1:4), labels = race)) %>%
   inner_join(co_urb.2mrg) %>%
   rename(gender = sex, race.cat = race2)
 
