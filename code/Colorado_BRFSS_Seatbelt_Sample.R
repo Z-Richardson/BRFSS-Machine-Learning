@@ -113,8 +113,7 @@ insample.df <- do.call(rbind, winsmpl.lst) %>%
   mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
   mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
   inner_join(co_urb.2mrg) %>%
-  rename(gender = sex, race.cat = race2) %>%
-  select(seatbelt, age, gender:smoker, race.cat)
+  rename(gender = sex, race.cat = race2)
 
 outsample.df <- do.call(rbind, outsmpl.lst) %>%
   rename(., income = income2, smoker = X_rfsmok3) %>%
@@ -134,8 +133,7 @@ outsample.df <- do.call(rbind, outsmpl.lst) %>%
   mutate(genhlth = factor(.data$genhlth, levels = c(1:5), labels = health)) %>%
   mutate(smoker = factor(.data$smoker, levels = c(1,2), labels = smoke)) %>%
   inner_join(co_urb.2mrg) %>%
-  rename(gender = sex, race.cat = race2) %>%
-  select(age, gender:smoker, race.cat)
+  rename(gender = sex, race.cat = race2)
 
   # rm(winsmpl.lst, outsmpl.lst)
 save(insample.df, outsample.df, file = "brfss_small_ml_dfs.RData")
